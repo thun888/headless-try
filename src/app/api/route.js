@@ -18,6 +18,8 @@ const puppeteer = require("puppeteer-core");
 export async function GET(request) {
   const url = new URL(request.url);
   const urlStr = url.searchParams.get("url");
+  const width = parseInt(url.searchParams.get("width")) || 1920;
+  const height = parseInt(url.searchParams.get("height")) || 1080;
   if (!urlStr) {
     return NextResponse.json(
       { error: "Missing url parameter" },
@@ -36,7 +38,7 @@ export async function GET(request) {
             "-disable-site-isolation-trials",
           ]
         : [...chromium.args, "--disable-blink-features=AutomationControlled"],
-      defaultViewport: { width: 1920, height: 1080 },
+      defaultViewport: { width: width, height: height },
       executablePath: isDev
         ? localExecutablePath
         : await chromium.executablePath(remoteExecutablePath),
@@ -47,7 +49,7 @@ export async function GET(request) {
     const pages = await browser.pages();
     const page = pages[0];
     await page.setUserAgent(userAgent);
-    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setViewport({ width: width, height: height });
     const preloadFile = fs.readFileSync(
       path.join(process.cwd(), "/src/utils/preload.js"),
       "utf8"
@@ -66,6 +68,10 @@ export async function GET(request) {
 
     headers.set("Content-Type", "image/png");
     headers.set("Content-Length", blob.length.toString());
+    // 添加缓存控制头
+    headers.set("Cache-Control", "public, max-age=604800"); // 7天的缓存时间
+    headers.set("ETag", `"${Buffer.from(blob).toString('base64').substring(0, 16)}"`);
+    headers.set("Last-Modified", new Date().toUTCString());
 
     // or just use new Response ❗️
     return new NextResponse(blob, { status: 200, statusText: "OK", headers });

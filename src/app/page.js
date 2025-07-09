@@ -25,7 +25,7 @@ export default function Home() {
     const intervalTimer = startDuration();
     try {
       setLoading(true);
-      const res = await fetch(`/try?url=${url}`, {
+      const res = await fetch(`/api?url=${url}`, {
         next: { revalidate: 10 },
       });
       const data = await res.blob();
